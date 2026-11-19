@@ -1,0 +1,11 @@
+<p>Libros!</p>
+@for (item of books(); track item._id ?? $index) {
+  <li>
+    {{ item.title }} <br>
+    Autor: {{ item.authorId }} <br>
+    ISBN: {{ item.isbn }} <br>
+    Año: {{ item.year ?? 'No especificado' }} <br>
+  </li>
+}
+
+<button type="button" (click)="createBook()">Crear</button>

@@ -36,6 +36,13 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+## Deployment
+
+The `render.yaml` file configures this Angular app as a Render Static Site.
+Create a Render Blueprint from the frontend repository to deploy it. Production
+builds use the API at `https://library-api-1-sheh.onrender.com/api/v1`; local
+development uses `http://localhost:3000/api/v1`.
+
 ## Running unit tests
 
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
