@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
-import { Book, BookDTO } from '../book/model/books.model';
+import { Book, BookDTO, PaginatedResponse } from '../book/model/books.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -15,7 +15,9 @@ export class BooksService {
   private url = `${environment.apiUrl}/books`;
 
   getBooks(): Observable<Book[]> {
-    return this.postman.get<Book[]>(this.url);
+    return this.postman
+      .get<PaginatedResponse<Book>>(this.url)
+      .pipe(map((response) => response.data));
   }
 
   createBook(dataBook: BookDTO): Observable<Book> {
