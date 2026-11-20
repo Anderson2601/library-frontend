@@ -8,7 +8,7 @@ negra, plateada y dorada, con diseño adaptable para pantallas pequeñas.
 
 - Crear, editar, buscar, filtrar y eliminar libros.
 - Administrar autores y asignarlos a los libros.
-- Registrar préstamos, consultar su estado y registrar devoluciones.
+- Registrar préstamos con libro, lector y fecha; consultar su estado y registrar devoluciones.
 - Mostrar indicadores del catálogo y mensajes de resultado de la API.
 
 La API impide eliminar libros con préstamos activos y autores que todavía tengan

@@ -35,6 +35,7 @@ interface AuthorForm {
 interface LoanForm {
   bookId: string;
   userName: string;
+  loanDate: string;
 }
 
 @Component({
@@ -219,10 +220,7 @@ export class BooksComponent {
 
   // Opens the loan form and optionally preselects the book from the catalog.
   openLoanForm(book?: Book): void {
-    this.loanDraft = {
-      bookId: book?._id ?? '',
-      userName: '',
-    };
+    this.loanDraft = { ...this.emptyLoanForm(), bookId: book?._id ?? '' };
     this.availableBooksForLoan.set([]);
     this.isLoadingAvailableBooks.set(true);
     this.loanError.set(null);
@@ -253,10 +251,11 @@ export class BooksComponent {
     const payload: LoanDTO = {
       bookId: this.loanDraft.bookId.trim(),
       userName: this.loanDraft.userName.trim(),
+      loanDate: this.loanDraft.loanDate.trim(),
     };
 
-    if (!payload.bookId || !payload.userName) {
-      this.loanError.set('Selecciona un libro y escribe el nombre de quien lo recibe.');
+    if (!payload.bookId || !payload.userName || !payload.loanDate) {
+      this.loanError.set('Selecciona un libro, indica la fecha y escribe el nombre de quien lo recibe.');
       return;
     }
 
@@ -508,6 +507,14 @@ export class BooksComponent {
 
   // Creates a clean loan form model before each new checkout.
   private emptyLoanForm(): LoanForm {
-    return { bookId: '', userName: '' };
+    return { bookId: '', userName: '', loanDate: this.todayDate() };
+  }
+
+  // Usa la fecha local para que el campo date no retroceda un día por conversión UTC.
+  private todayDate(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${now.getFullYear()}-${month}-${day}`;
   }
 }

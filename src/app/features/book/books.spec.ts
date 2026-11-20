@@ -80,6 +80,7 @@ describe('BooksComponent loans', () => {
 
     expect(component.dialog()).toBe('loan');
     expect(component.loanDraft.bookId).toBe(book._id);
+    expect(component.loanDraft.loanDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(component.availableBooksForLoan()).toEqual([book]);
     expect(component.isLoadingAvailableBooks()).toBe(false);
   });
@@ -87,18 +88,24 @@ describe('BooksComponent loans', () => {
   it('explica los campos obligatorios y no envía un préstamo incompleto', () => {
     const component = TestBed.createComponent(BooksComponent).componentInstance;
     component.availableBooksForLoan.set([book]);
-    component.loanDraft = { bookId: book._id ?? '', userName: '  ' };
+    component.loanDraft = { bookId: book._id ?? '', userName: '  ', loanDate: '' };
 
     component.saveLoan();
 
     expect(loansService.createLoan).not.toHaveBeenCalled();
-    expect(component.loanError()).toBe('Selecciona un libro y escribe el nombre de quien lo recibe.');
+    expect(component.loanError()).toBe(
+      'Selecciona un libro, indica la fecha y escribe el nombre de quien lo recibe.'
+    );
   });
 
   it('envía el nombre del lector y cierra el formulario tras confirmar', () => {
     const component = TestBed.createComponent(BooksComponent).componentInstance;
     component.availableBooksForLoan.set([book]);
-    component.loanDraft = { bookId: book._id ?? '', userName: '  Ana Pérez  ' };
+    component.loanDraft = {
+      bookId: book._id ?? '',
+      userName: '  Ana Pérez  ',
+      loanDate: '2026-03-15',
+    };
     component.dialog.set('loan');
 
     component.saveLoan();
@@ -106,6 +113,7 @@ describe('BooksComponent loans', () => {
     expect(loansService.createLoan).toHaveBeenCalledWith({
       bookId: 'book-1',
       userName: 'Ana Pérez',
+      loanDate: '2026-03-15',
     });
     expect(component.dialog()).toBeNull();
     expect(component.feedback()?.text).toBe('Préstamo registrado.');
@@ -114,7 +122,11 @@ describe('BooksComponent loans', () => {
   it('muestra dentro del formulario el error que responde la API', () => {
     const component = TestBed.createComponent(BooksComponent).componentInstance;
     component.availableBooksForLoan.set([book]);
-    component.loanDraft = { bookId: book._id ?? '', userName: 'Ana Pérez' };
+    component.loanDraft = {
+      bookId: book._id ?? '',
+      userName: 'Ana Pérez',
+      loanDate: '2026-03-15',
+    };
     component.dialog.set('loan');
     loansService.createLoan.mockImplementation(() =>
       throwError(() => new HttpErrorResponse({

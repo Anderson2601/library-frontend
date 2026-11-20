@@ -567,6 +567,17 @@
           </div>
         }
         <label class="form-field">
+          <span>Fecha del préstamo <b>*</b></span>
+          <input
+            type="date"
+            name="loanDate"
+            required
+            [disabled]="isSaving()"
+            [(ngModel)]="loanDraft.loanDate"
+            (ngModelChange)="clearLoanError()"
+          />
+        </label>
+        <label class="form-field">
           <span>Nombre de quien recibe el libro <b>*</b></span>
           <input
             type="text"
@@ -579,7 +590,7 @@
           />
         </label>
         <p class="form-help">
-          Completa los dos campos obligatorios. Al confirmar, el libro cambiará automáticamente a estado “Prestado”.
+          Completa los tres campos obligatorios. La fecha se propone para hoy y puedes cambiarla antes de confirmar.
         </p>
         <div class="modal-actions">
           <button class="button button-outline" type="button" (click)="closeDialog()">Cancelar</button>

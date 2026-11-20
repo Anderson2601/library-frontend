@@ -52,7 +52,7 @@ export interface Loan {
 export interface LoanDTO {
   bookId: string;
   userName: string;
-  loanDate?: string;
+  loanDate: string;
 }
 
 // Estructura común que devuelve la API en sus listados paginados.
