@@ -218,7 +218,7 @@
                     <div class="book-metadata">
                       <span>ISBN {{ book.isbn }}</span>
                       <span class="metadata-divider" aria-hidden="true">·</span>
-                      <span>{{ book.year ?? 'Año no indicado' }}</span>
+                      <span>{{ book.publicationLabel ?? book.year ?? 'Año no indicado' }}</span>
                     </div>
                     @if (activeLoanFor(book._id); as loan) {
                       <p class="borrower-line">En préstamo a <strong>{{ loan.userName }}</strong></p>

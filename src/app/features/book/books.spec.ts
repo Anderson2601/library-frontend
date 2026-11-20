@@ -141,4 +141,19 @@ describe('BooksComponent loans', () => {
     expect(component.isSaving()).toBe(false);
     expect(component.loanError()).toBe('El libro no está disponible para préstamo');
   });
+
+  it('muestra la etiqueta completa del año de publicación', () => {
+    const publicationLabel = '1605 (1.ª parte) / 1615 (2.ª parte)';
+    booksService.getBooks.mockReturnValue(
+      of({
+        ...bookPage,
+        data: [{ ...book, year: 1605, publicationLabel }],
+      })
+    );
+    const fixture = TestBed.createComponent(BooksComponent);
+
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain(publicationLabel);
+  });
 });

@@ -5,6 +5,7 @@ export interface Book {
   isbn: string;
   authorId: string;
   year?: number;
+  publicationLabel?: string;
   available: boolean;
   createdAt: string;
   updatedAt: string;
@@ -16,6 +17,7 @@ export interface BookDTO {
   isbn: string;
   authorId: string;
   year?: number;
+  publicationLabel?: string;
   available?: boolean;
 }
 
