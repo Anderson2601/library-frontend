@@ -1,66 +1,54 @@
-# FrontApi
+# Panel de gestión de biblioteca
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.6.
+Frontend Angular standalone para administrar el catálogo, sus autores y el ciclo
+de préstamos mediante la API REST de `library-api`. La interfaz usa una paleta
+negra, plateada y dorada, con diseño adaptable para pantallas pequeñas.
 
-## Development server
+## Funciones
 
-To start a local development server, run:
+- Crear, editar, buscar, filtrar y eliminar libros.
+- Administrar autores y asignarlos a los libros.
+- Registrar préstamos, consultar su estado y registrar devoluciones.
+- Mostrar indicadores del catálogo y mensajes de resultado de la API.
 
-```bash
-ng serve
-```
+La API impide eliminar libros con préstamos activos y autores que todavía tengan
+libros asociados; el panel presenta esos errores para que se puedan resolver.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Ejecutar localmente
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Requiere Node.js y npm. Desde la carpeta del frontend:
 
 ```bash
-ng generate --help
+npm ci
+npm start
 ```
 
-## Building
+La aplicación se sirve en `http://localhost:4200/` y, de forma local, consulta
+`http://localhost:3000/api/v1`. Para apuntar a otra API, cambia `apiUrl` en
+`src/environments/environment.ts`. La compilación de producción usa
+`src/environments/environment.production.ts`.
 
-To build the project run:
+## Compilar y probar
 
 ```bash
-ng build
+npm run build
+npm test -- --watch=false
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Data binding en Angular
 
-## Deployment
+Los ejemplos didácticos están en `src/app/features/book/books.html`:
 
-The `render.yaml` file configures this Angular app as a Render Static Site.
-Create a Render Blueprint from the frontend repository to deploy it. Production
-builds use the API at `https://library-api-1-sheh.onrender.com/api/v1`; local
-development uses `http://localhost:3000/api/v1`.
+- **Interpolación** (`{{ ... }}`): muestra métricas y valores de libros.
+- **Property binding** (`[disabled]`, `[class...]`): actualiza propiedades y
+  estados visuales desde el componente.
+- **Event binding** (`(click)`, `(ngModelChange)`): conecta acciones de la UI
+  con funciones del componente.
+- **Two-way binding** (`[(ngModel)]`): sincroniza formularios y filtros con sus
+  campos en `src/app/features/book/books.ts`.
 
-## Running unit tests
+## Publicar en Render
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+`render.yaml` configura un Static Site con `npm ci && npm run build`, publica
+`dist/front-api/browser` y reescribe las rutas de Angular a `index.html`. Se
+puede desplegar creando un Blueprint de Render desde el repositorio del frontend.

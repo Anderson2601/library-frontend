@@ -1,1 +1,21 @@
-/* You can add global styles to this file, and also import other style files */
+@use './app/features/book/books';
+
+/* Normaliza el tamaño y la tipografía antes de aplicar los estilos de cada pantalla. */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+  background: #f7f6f2;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

@@ -1,11 +1,685 @@
-<p>Libros!</p>
-@for (item of books(); track item._id ?? $index) {
-  <li>
-    {{ item.title }} <br>
-    Autor: {{ item.authorId }} <br>
-    ISBN: {{ item.isbn }} <br>
-    Año: {{ item.year ?? 'No especificado' }} <br>
-  </li>
+<div class="library-shell">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/books" aria-label="Ir al inicio de Biblioteca Aurea">
+      <span class="brand-mark" aria-hidden="true">B</span>
+      <span class="brand-copy">
+        <strong>BIBLIOTECA</strong>
+        <small>GESTIÓN DE COLECCIÓN</small>
+      </span>
+    </a>
+
+    <div class="side-label">ESPACIO DE TRABAJO</div>
+    <nav class="side-nav" aria-label="Secciones de la biblioteca">
+      <button
+        type="button"
+        [class.is-active]="activeTab === 'books'"
+        [attr.aria-current]="activeTab === 'books' ? 'page' : null"
+        (click)="setTab('books')"
+      >
+        <span class="nav-icon" aria-hidden="true">▤</span>
+        Catálogo
+        <span class="nav-count">{{ totalBookCount() }}</span>
+      </button>
+      <button
+        type="button"
+        [class.is-active]="activeTab === 'loans'"
+        [attr.aria-current]="activeTab === 'loans' ? 'page' : null"
+        (click)="setTab('loans')"
+      >
+        <span class="nav-icon" aria-hidden="true">↗</span>
+        Préstamos
+        <span class="nav-count">{{ activeLoanTotal() }}</span>
+      </button>
+      <button
+        type="button"
+        [class.is-active]="activeTab === 'authors'"
+        [attr.aria-current]="activeTab === 'authors' ? 'page' : null"
+        (click)="setTab('authors')"
+      >
+        <span class="nav-icon" aria-hidden="true">✦</span>
+        Autores
+        <span class="nav-count">{{ authors().length }}</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="connection-card">
+        <span class="connection-dot" aria-hidden="true"></span>
+        <span>
+          <strong>API REST</strong>
+          <small>Gestión de biblioteca</small>
+        </span>
+      </div>
+      <span class="sidebar-version">PANEL DE BIBLIOTECA · V1</span>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <div class="breadcrumb">
+        <span>Biblioteca</span>
+        <span aria-hidden="true">/</span>
+        <strong>
+          @if (activeTab === 'books') { Catálogo }
+          @else if (activeTab === 'loans') { Préstamos }
+          @else { Autores }
+        </strong>
+      </div>
+      <div class="topbar-actions">
+        <span class="today-label">ADMINISTRACIÓN</span>
+        <span class="profile-avatar" aria-label="Perfil de administración">A</span>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <section class="welcome-row">
+        <div>
+          <p class="eyebrow">PANEL DE CONTROL</p>
+          <h1>Tu biblioteca, <span>en orden.</span></h1>
+          <p class="welcome-copy">
+            Administra el catálogo, registra préstamos y mantén tu colección al día.
+          </p>
+        </div>
+        <button class="button button-gold" type="button" (click)="openBookForm()">
+          <span aria-hidden="true">+</span>
+          Agregar libro
+        </button>
+      </section>
+
+      <!-- Interpolación {{ }} presenta indicadores calculados a partir de la API. -->
+      <section class="stat-grid" aria-label="Resumen de la biblioteca">
+        <article class="stat-card">
+          <span class="stat-label">LIBROS EN CATÁLOGO</span>
+          <strong>{{ totalBookCount() }}</strong>
+          <span class="stat-note">Títulos registrados</span>
+          <span class="stat-decoration" aria-hidden="true">▤</span>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">DISPONIBLES</span>
+          <strong>{{ availableBookCount() }}</strong>
+          <span class="stat-note">Listos para préstamo</span>
+          <span class="stat-decoration" aria-hidden="true">✓</span>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">PRESTADOS</span>
+          <strong>{{ borrowedBookCount() }}</strong>
+          <span class="stat-note">En manos de lectores</span>
+          <span class="stat-decoration" aria-hidden="true">↗</span>
+        </article>
+        <article class="stat-card stat-card-accent">
+          <span class="stat-label">PRÉSTAMOS ACTIVOS</span>
+          <strong>{{ activeLoanTotal() }}</strong>
+          <span class="stat-note">Pendientes de devolución</span>
+          <span class="stat-decoration" aria-hidden="true">◷</span>
+        </article>
+      </section>
+
+      <!-- Property binding fija el estilo y aria-live anuncia los mensajes accesibles. -->
+      @if (feedback(); as message) {
+        <div
+          class="feedback"
+          [class.feedback-error]="message.kind === 'error'"
+          [class.feedback-success]="message.kind === 'success'"
+          role="status"
+          aria-live="polite"
+        >
+          <span>{{ message.text }}</span>
+          <button type="button" aria-label="Cerrar mensaje" (click)="clearFeedback()">×</button>
+        </div>
+      }
+
+      @if (activeTab === 'books') {
+        <section class="content-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">COLECCIÓN</p>
+              <h2>Catálogo de libros</h2>
+              <p>Consulta, actualiza y controla la disponibilidad de cada título.</p>
+            </div>
+            <button class="button button-outline" type="button" (click)="refreshDashboard()">
+              <span aria-hidden="true">⟳</span>
+              Actualizar
+            </button>
+          </div>
+
+          <div class="toolbar">
+            <label class="search-control">
+              <span aria-hidden="true">⌕</span>
+              <!-- Two-way binding mantiene el texto de búsqueda sincronizado con searchTerm. -->
+              <input
+                type="search"
+                name="bookSearch"
+                placeholder="Buscar título, ISBN o autor..."
+                aria-label="Buscar libros"
+                [(ngModel)]="searchTerm"
+              />
+            </label>
+            <label class="filter-control">
+              <span>Disponibilidad</span>
+              <!-- ngModel enlaza el filtro; ngModelChange recarga los resultados del servidor. -->
+              <select
+                name="availabilityFilter"
+                [(ngModel)]="availabilityFilter"
+                (ngModelChange)="applyAvailabilityFilter()"
+              >
+                <option value="all">Todos los libros</option>
+                <option value="available">Disponibles</option>
+                <option value="loaned">Prestados</option>
+              </select>
+            </label>
+            <span class="result-count">{{ filteredBookCount() }} resultados</span>
+          </div>
+
+          @if (isLoadingBooks()) {
+            <div class="loading-state" role="status">
+              <span class="loading-spinner" aria-hidden="true"></span>
+              Cargando catálogo...
+            </div>
+          } @else if (filteredBooks.length === 0) {
+            <div class="empty-state">
+              <span class="empty-mark" aria-hidden="true">▤</span>
+              @if (searchTerm) {
+                <h3>No encontramos ese libro</h3>
+                <p>Prueba con otro título, ISBN o autor.</p>
+                <button class="button button-outline" type="button" (click)="resetBookSearch()">
+                  Limpiar búsqueda
+                </button>
+              } @else {
+                <h3>Tu catálogo está listo para empezar</h3>
+                <p>Agrega un autor y luego registra los libros de tu colección.</p>
+                <div class="empty-actions">
+                  <button class="button button-gold" type="button" (click)="openAuthorForm()">
+                    Agregar autor
+                  </button>
+                  <button class="button button-outline" type="button" (click)="openBookForm()">
+                    Agregar libro
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="book-list">
+              @for (book of filteredBooks; track book._id ?? book.isbn) {
+                <article class="book-row">
+                  <div class="book-cover" [class.book-cover-muted]="!book.available" aria-hidden="true">
+                    <span>{{ book.title.charAt(0).toUpperCase() }}</span>
+                    <i></i>
+                  </div>
+                  <div class="book-main">
+                    <div class="book-title-line">
+                      <h3>{{ book.title }}</h3>
+                      @if (book.available) {
+                        <span class="status-pill status-available">Disponible</span>
+                      } @else {
+                        <span class="status-pill status-loaned">Prestado</span>
+                      }
+                    </div>
+                    <p class="book-author">{{ authorName(book.authorId) }}</p>
+                    <div class="book-metadata">
+                      <span>ISBN {{ book.isbn }}</span>
+                      <span class="metadata-divider" aria-hidden="true">·</span>
+                      <span>{{ book.year ?? 'Año no indicado' }}</span>
+                    </div>
+                    @if (activeLoanFor(book._id); as loan) {
+                      <p class="borrower-line">En préstamo a <strong>{{ loan.userName }}</strong></p>
+                    }
+                  </div>
+                  <div class="book-actions">
+                    <button
+                      class="button button-small button-outline"
+                      type="button"
+                      [disabled]="!book.available || isSaving()"
+                      (click)="openLoanForm(book)"
+                    >
+                      Prestar
+                    </button>
+                    <button
+                      class="icon-button"
+                      type="button"
+                      [attr.aria-label]="'Editar ' + book.title"
+                      (click)="openBookForm(book)"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      class="icon-button icon-button-danger"
+                      type="button"
+                      [attr.aria-label]="'Eliminar ' + book.title"
+                      (click)="askDeleteBook(book)"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </article>
+              }
+            </div>
+
+            <div class="pagination">
+              <span>Página {{ bookPage() }} de {{ bookPageCount() }}</span>
+              <div>
+                <!-- Property binding evita solicitar páginas fuera de rango. -->
+                <button
+                  class="button button-outline button-small"
+                  type="button"
+                  [disabled]="bookPage() <= 1"
+                  (click)="changeBookPage(-1)"
+                >
+                  Anterior
+                </button>
+                <button
+                  class="button button-outline button-small"
+                  type="button"
+                  [disabled]="bookPage() >= bookPageCount()"
+                  (click)="changeBookPage(1)"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      @if (activeTab === 'loans') {
+        <section class="content-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CIRCULACIÓN</p>
+              <h2>Control de préstamos</h2>
+              <p>Registra quién tiene cada libro y confirma las devoluciones.</p>
+            </div>
+            <button class="button button-gold" type="button" (click)="openLoanForm()">
+              <span aria-hidden="true">+</span>
+              Registrar préstamo
+            </button>
+          </div>
+
+          <div class="loan-filters" role="group" aria-label="Filtrar historial de préstamos">
+            <button
+              type="button"
+              [class.is-selected]="loanFilter === 'active'"
+              (click)="loanFilter = 'active'"
+            >
+              Activos <span>{{ activeLoanTotal() }}</span>
+            </button>
+            <button
+              type="button"
+              [class.is-selected]="loanFilter === 'returned'"
+              (click)="loanFilter = 'returned'"
+            >
+              Devueltos <span>{{ returnedLoans().length }}</span>
+            </button>
+            <button
+              type="button"
+              [class.is-selected]="loanFilter === 'all'"
+              (click)="loanFilter = 'all'"
+            >
+              Todos <span>{{ loans().length }}</span>
+            </button>
+          </div>
+
+          @if (isLoadingLoans()) {
+            <div class="loading-state" role="status">
+              <span class="loading-spinner" aria-hidden="true"></span>
+              Cargando préstamos...
+            </div>
+          } @else if (visibleLoans.length === 0) {
+            <div class="empty-state compact-empty">
+              <span class="empty-mark" aria-hidden="true">◷</span>
+              <h3>No hay préstamos {{ loanFilter === 'active' ? 'activos' : 'para mostrar' }}</h3>
+              <p>Cuando registres un préstamo, su estado aparecerá aquí.</p>
+            </div>
+          } @else {
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>LIBRO</th>
+                    <th>LECTOR</th>
+                    <th>FECHA DE PRÉSTAMO</th>
+                    <th>ESTADO</th>
+                    <th>DEVOLUCIÓN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (loan of visibleLoans; track loan._id) {
+                    <tr>
+                      <td>
+                        <strong>{{ bookTitle(loan.bookId) }}</strong>
+                        <small class="table-subtitle">Registro #{{ loan._id?.slice(-6) }}</small>
+                      </td>
+                      <td>{{ loan.userName }}</td>
+                      <td>{{ loan.loanDate | date: 'mediumDate' }}</td>
+                      <td>
+                        @if (loan.returned) {
+                          <span class="status-pill status-available">Devuelto</span>
+                        } @else {
+                          <span class="status-pill status-loaned">Pendiente</span>
+                        }
+                      </td>
+                      <td>
+                        @if (loan.returned) {
+                          {{ loan.returnDate | date: 'mediumDate' }}
+                        } @else {
+                          <button
+                            class="button button-small button-outline"
+                            type="button"
+                            (click)="returnLoan(loan)"
+                          >
+                            Registrar devolución
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+
+      @if (activeTab === 'authors') {
+        <section class="content-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">COLABORADORES</p>
+              <h2>Autores</h2>
+              <p>Administra los autores que puedes relacionar con cada libro.</p>
+            </div>
+            <button class="button button-gold" type="button" (click)="openAuthorForm()">
+              <span aria-hidden="true">+</span>
+              Agregar autor
+            </button>
+          </div>
+
+          @if (authors().length === 0) {
+            <div class="empty-state compact-empty">
+              <span class="empty-mark" aria-hidden="true">✦</span>
+              <h3>Aún no hay autores registrados</h3>
+              <p>Agrega el primer autor para comenzar a crear libros.</p>
+              <button class="button button-gold" type="button" (click)="openAuthorForm()">
+                Registrar autor
+              </button>
+            </div>
+          } @else {
+            <div class="author-grid">
+              @for (author of authors(); track author._id) {
+                <article class="author-card">
+                  <div class="author-avatar" aria-hidden="true">
+                    {{ author.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="author-details">
+                    <h3>{{ author.name }}</h3>
+                    <p>{{ author.nationality }}</p>
+                    <small>{{ author.birthYear ?? 'Año de nacimiento no indicado' }}</small>
+                  </div>
+                  <div class="author-actions">
+                    <button
+                      class="icon-button"
+                      type="button"
+                      [attr.aria-label]="'Editar ' + author.name"
+                      (click)="openAuthorForm(author)"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      class="icon-button icon-button-danger"
+                      type="button"
+                      [attr.aria-label]="'Eliminar ' + author.name"
+                      (click)="askDeleteAuthor(author)"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <footer class="page-footer">
+        <span>Biblioteca · Panel administrativo</span>
+        <button type="button" class="footer-refresh" (click)="refreshDashboard()">
+          Actualizar datos
+        </button>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<!-- Cada diálogo usa event binding para enviar, cancelar o confirmar una acción. -->
+@if (dialog() === 'book') {
+  <div class="modal-backdrop">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="book-dialog-title">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">{{ editingBook ? 'ACTUALIZACIÓN' : 'NUEVO REGISTRO' }}</p>
+          <h2 id="book-dialog-title">{{ editingBook ? 'Editar libro' : 'Agregar libro' }}</h2>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeDialog()">×</button>
+      </div>
+      <form #bookForm="ngForm" (ngSubmit)="saveBook()">
+        <label class="form-field">
+          <span>Título <b>*</b></span>
+          <input
+            type="text"
+            name="title"
+            required
+            maxlength="160"
+            placeholder="Ej. Cien años de soledad"
+            [(ngModel)]="bookDraft.title"
+          />
+        </label>
+        <label class="form-field">
+          <span>ISBN <b>*</b></span>
+          <input
+            type="text"
+            name="isbn"
+            required
+            maxlength="32"
+            placeholder="Ej. 9780307474728"
+            [(ngModel)]="bookDraft.isbn"
+          />
+        </label>
+        <label class="form-field">
+          <span>Autor <b>*</b></span>
+          <select name="authorId" required [(ngModel)]="bookDraft.authorId">
+            <option value="" disabled>Selecciona un autor</option>
+            @for (author of authors(); track author._id) {
+              <option [value]="author._id ?? ''">{{ author.name }}</option>
+            }
+          </select>
+        </label>
+        @if (authors().length === 0) {
+          <div class="inline-hint">
+            Primero registra un autor.
+            <button type="button" (click)="openAuthorFormFromBook()">Agregar autor</button>
+          </div>
+        }
+        <label class="form-field">
+          <span>Año de publicación</span>
+          <input
+            type="number"
+            name="year"
+            min="0"
+            step="1"
+            placeholder="Ej. 1967"
+            [(ngModel)]="bookDraft.year"
+          />
+        </label>
+        <div class="modal-actions">
+          <button class="button button-outline" type="button" (click)="closeDialog()">Cancelar</button>
+          <!-- Property binding bloquea el envío si falta algún dato obligatorio. -->
+          <button
+            class="button button-gold"
+            type="submit"
+            [disabled]="bookForm.invalid || isSaving() || authors().length === 0"
+          >
+            {{ isSaving() ? 'Guardando...' : editingBook ? 'Guardar cambios' : 'Guardar libro' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
 }
 
-<button type="button" (click)="createBook()">Crear</button>
+@if (dialog() === 'loan') {
+  <div class="modal-backdrop">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="loan-dialog-title">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">CIRCULACIÓN</p>
+          <h2 id="loan-dialog-title">Registrar préstamo</h2>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeDialog()">×</button>
+      </div>
+      <form #loanForm="ngForm" (ngSubmit)="saveLoan()">
+        <label class="form-field">
+          <span>Libro disponible <b>*</b></span>
+          <select name="bookId" required [(ngModel)]="loanDraft.bookId">
+            <option value="" disabled>Selecciona un libro</option>
+            @for (book of availableBooksForLoan(); track book._id) {
+              <option [value]="book._id ?? ''">{{ book.title }} · {{ book.isbn }}</option>
+            }
+          </select>
+        </label>
+        @if (availableBooksForLoan().length === 0) {
+          <p class="inline-hint">No hay libros disponibles para prestar.</p>
+        }
+        <label class="form-field">
+          <span>Nombre de quien recibe el libro <b>*</b></span>
+          <input
+            type="text"
+            name="userName"
+            required
+            maxlength="120"
+            placeholder="Nombre del lector"
+            [(ngModel)]="loanDraft.userName"
+          />
+        </label>
+        <p class="form-help">
+          Al registrar el préstamo, el libro cambiará automáticamente a estado “Prestado”.
+        </p>
+        <div class="modal-actions">
+          <button class="button button-outline" type="button" (click)="closeDialog()">Cancelar</button>
+          <button
+            class="button button-gold"
+            type="submit"
+            [disabled]="loanForm.invalid || isSaving() || availableBooksForLoan().length === 0"
+          >
+            {{ isSaving() ? 'Registrando...' : 'Confirmar préstamo' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (dialog() === 'author') {
+  <div class="modal-backdrop">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="author-dialog-title">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">CATÁLOGO DE AUTORES</p>
+          <h2 id="author-dialog-title">{{ editingAuthor ? 'Editar autor' : 'Agregar autor' }}</h2>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeDialog()">×</button>
+      </div>
+      <form #authorForm="ngForm" (ngSubmit)="saveAuthor()">
+        <label class="form-field">
+          <span>Nombre completo <b>*</b></span>
+          <input
+            type="text"
+            name="authorName"
+            required
+            maxlength="120"
+            placeholder="Nombre del autor"
+            [(ngModel)]="authorDraft.name"
+          />
+        </label>
+        <label class="form-field">
+          <span>Nacionalidad <b>*</b></span>
+          <input
+            type="text"
+            name="nationality"
+            required
+            maxlength="80"
+            placeholder="Nacionalidad"
+            [(ngModel)]="authorDraft.nationality"
+          />
+        </label>
+        <label class="form-field">
+          <span>Año de nacimiento</span>
+          <input
+            type="number"
+            name="birthYear"
+            min="0"
+            step="1"
+            placeholder="Opcional"
+            [(ngModel)]="authorDraft.birthYear"
+          />
+        </label>
+        <div class="modal-actions">
+          <button class="button button-outline" type="button" (click)="closeDialog()">Cancelar</button>
+          <button
+            class="button button-gold"
+            type="submit"
+            [disabled]="authorForm.invalid || isSaving()"
+          >
+            {{ isSaving() ? 'Guardando...' : editingAuthor ? 'Guardar cambios' : 'Guardar autor' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (dialog() === 'deleteBook') {
+  <div class="modal-backdrop">
+    <section class="modal-card modal-card-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-book-title">
+      <p class="eyebrow">CONFIRMACIÓN</p>
+      <h2 id="delete-book-title">¿Eliminar este libro?</h2>
+      <p>
+        Se eliminará <strong>{{ pendingDeleteBook?.title }}</strong>. No se puede borrar un libro
+        mientras tenga un préstamo activo.
+      </p>
+      <div class="modal-actions">
+        <button class="button button-outline" type="button" (click)="closeDialog()">Cancelar</button>
+        <button
+          class="button button-danger"
+          type="button"
+          [disabled]="isSaving()"
+          (click)="deleteBook()"
+        >
+          {{ isSaving() ? 'Eliminando...' : 'Eliminar libro' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
+@if (dialog() === 'deleteAuthor') {
+  <div class="modal-backdrop">
+    <section class="modal-card modal-card-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-author-title">
+      <p class="eyebrow">CONFIRMACIÓN</p>
+      <h2 id="delete-author-title">¿Eliminar este autor?</h2>
+      <p>
+        Se eliminará <strong>{{ pendingDeleteAuthor?.name }}</strong>. La API no permite eliminar
+        autores con libros asociados.
+      </p>
+      <div class="modal-actions">
+        <button class="button button-outline" type="button" (click)="closeDialog()">Cancelar</button>
+        <button
+          class="button button-danger"
+          type="button"
+          [disabled]="isSaving()"
+          (click)="deleteAuthor()"
+        >
+          {{ isSaving() ? 'Eliminando...' : 'Eliminar autor' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
