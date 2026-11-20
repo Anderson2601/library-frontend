@@ -538,15 +538,30 @@
       <form #loanForm="ngForm" (ngSubmit)="saveLoan()">
         <label class="form-field">
           <span>Libro disponible <b>*</b></span>
-          <select name="bookId" required [(ngModel)]="loanDraft.bookId">
+          <select
+            name="bookId"
+            required
+            [disabled]="isLoadingAvailableBooks() || isSaving()"
+            [(ngModel)]="loanDraft.bookId"
+            (ngModelChange)="clearLoanError()"
+          >
             <option value="" disabled>Selecciona un libro</option>
             @for (book of availableBooksForLoan(); track book._id) {
               <option [value]="book._id ?? ''">{{ book.title }} · {{ book.isbn }}</option>
             }
           </select>
         </label>
-        @if (availableBooksForLoan().length === 0) {
-          <p class="inline-hint">No hay libros disponibles para prestar.</p>
+        @if (isLoadingAvailableBooks()) {
+          <p class="inline-hint" role="status">Consultando libros disponibles...</p>
+        } @else if (loanError(); as error) {
+          <p class="loan-form-error" role="alert">{{ error }}</p>
+        } @else if (availableBooksForLoan().length === 0) {
+          <div class="loan-empty-state" role="status">
+            <p>No hay libros disponibles para prestar en este momento.</p>
+            <button type="button" class="button button-outline button-small" (click)="goToBookCatalog()">
+              Volver al catálogo
+            </button>
+          </div>
         }
         <label class="form-field">
           <span>Nombre de quien recibe el libro <b>*</b></span>
@@ -557,17 +572,18 @@
             maxlength="120"
             placeholder="Nombre del lector"
             [(ngModel)]="loanDraft.userName"
+            (ngModelChange)="clearLoanError()"
           />
         </label>
         <p class="form-help">
-          Al registrar el préstamo, el libro cambiará automáticamente a estado “Prestado”.
+          Completa los dos campos obligatorios. Al confirmar, el libro cambiará automáticamente a estado “Prestado”.
         </p>
         <div class="modal-actions">
           <button class="button button-outline" type="button" (click)="closeDialog()">Cancelar</button>
           <button
             class="button button-gold"
             type="submit"
-            [disabled]="loanForm.invalid || isSaving() || availableBooksForLoan().length === 0"
+            [disabled]="loanForm.invalid || isSaving() || isLoadingAvailableBooks() || availableBooksForLoan().length === 0"
           >
             {{ isSaving() ? 'Registrando...' : 'Confirmar préstamo' }}
           </button>

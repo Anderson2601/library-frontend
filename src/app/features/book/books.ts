@@ -61,9 +61,11 @@ export class BooksComponent {
   readonly bookPageCount = signal(1);
   readonly isLoadingBooks = signal(true);
   readonly isLoadingLoans = signal(true);
+  readonly isLoadingAvailableBooks = signal(false);
   readonly isSaving = signal(false);
   readonly dialog = signal<DialogMode>(null);
   readonly feedback = signal<FeedbackMessage | null>(null);
+  readonly loanError = signal<string | null>(null);
 
   // Interpolation reads these values; property bindings use them to disable invalid actions.
   readonly borrowedBookCount = computed(() =>
@@ -221,22 +223,49 @@ export class BooksComponent {
       bookId: book?._id ?? '',
       userName: '',
     };
+    this.availableBooksForLoan.set([]);
+    this.isLoadingAvailableBooks.set(true);
+    this.loanError.set(null);
     this.dialog.set('loan');
     this.feedback.set(null);
     this.booksService.getBooks(1, this.pageSize, true).subscribe({
-      next: (response) => this.availableBooksForLoan.set(response.data),
-      error: (error: unknown) =>
-        this.showApiError(error, 'No se pudieron cargar los libros disponibles para préstamo.'),
+      next: (response) => {
+        this.availableBooksForLoan.set(response.data);
+        this.isLoadingAvailableBooks.set(false);
+        if (book?._id && !response.data.some((availableBook) => availableBook._id === book._id)) {
+          this.loanDraft.bookId = '';
+          this.loanError.set('Ese libro ya no está disponible. Selecciona otro de la lista.');
+        }
+      },
+      error: (error: unknown) => {
+        this.isLoadingAvailableBooks.set(false);
+        this.loanError.set(
+          this.apiErrorMessage(error, 'No se pudieron cargar los libros disponibles.')
+        );
+      },
     });
   }
 
   // Creates a loan using the API's userName field; the API marks the book unavailable.
   saveLoan(): void {
+    if (this.isSaving()) return;
+
     const payload: LoanDTO = {
-      bookId: this.loanDraft.bookId,
+      bookId: this.loanDraft.bookId.trim(),
       userName: this.loanDraft.userName.trim(),
     };
 
+    if (!payload.bookId || !payload.userName) {
+      this.loanError.set('Selecciona un libro y escribe el nombre de quien lo recibe.');
+      return;
+    }
+
+    if (!this.availableBooksForLoan().some((book) => book._id === payload.bookId)) {
+      this.loanError.set('El libro ya no está disponible. Cierra y vuelve a abrir el formulario.');
+      return;
+    }
+
+    this.loanError.set(null);
     this.isSaving.set(true);
     this.loansService.createLoan(payload).subscribe({
       next: () => {
@@ -249,7 +278,7 @@ export class BooksComponent {
       },
       error: (error: unknown) => {
         this.isSaving.set(false);
-        this.showApiError(error, 'No se pudo registrar el préstamo.');
+        this.loanError.set(this.apiErrorMessage(error, 'No se pudo registrar el préstamo.'));
       },
     });
   }
@@ -348,6 +377,18 @@ export class BooksComponent {
     this.dialog.set(null);
     this.pendingDeleteBook = null;
     this.pendingDeleteAuthor = null;
+    this.loanError.set(null);
+  }
+
+  // Clears the inline loan message after the user updates a required field.
+  clearLoanError(): void {
+    this.loanError.set(null);
+  }
+
+  // Returns to the catalog when a loan cannot be registered because no book is available.
+  goToBookCatalog(): void {
+    this.closeDialog();
+    this.setTab('books');
   }
 
   // Removes the visible status message after the user has read it.
@@ -437,12 +478,17 @@ export class BooksComponent {
 
   // Maps known API error responses to a readable message and preserves the fallback context.
   private showApiError(error: unknown, fallback: string): void {
+    this.feedback.set({ kind: 'error', text: this.apiErrorMessage(error, fallback) });
+  }
+
+  // Uses a readable API message when present and otherwise keeps the operation context.
+  private apiErrorMessage(error: unknown, fallback: string): string {
     const apiMessage =
       error instanceof HttpErrorResponse &&
       typeof error.error?.message === 'string'
         ? error.error.message
         : null;
-    this.feedback.set({ kind: 'error', text: apiMessage ?? fallback });
+    return apiMessage ?? fallback;
   }
 
   // Sets a success message in the shared status region.
